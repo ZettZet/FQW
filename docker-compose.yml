@@ -1,0 +1,38 @@
+version: '3.3'
+
+services:
+  postgres_oil:
+    image: postgres:14
+    env_file:
+      - postgres_oil.env
+    volumes:
+      - "~/container_volumes/postgres_oil/data:/var/lib/postgresql/data"
+
+  postgres_gas:
+    image: postgres:14
+    env_file:
+      - postgres_gas.env
+    volumes:
+      - "~/container_volumes/postgres_gas/data:/var/lib/postgresql/data"
+
+  oil:
+    build: ./geoprod_oil/
+    env_file:
+      - postgres_oil.env
+    depends_on:
+      - postgres_oil
+
+  gas:
+    build: ./geoprod_gas/
+    env_file:
+      - postgres_gas.env
+    depends_on:
+      - postgres_gas
+
+  fastapi_inpoint:
+    build: ./geoprod_inpoint/
+    ports:
+      - "80:8000"
+    depends_on:
+      - oil
+      - gas
