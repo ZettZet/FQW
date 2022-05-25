@@ -4,35 +4,59 @@ services:
   postgres_oil:
     image: postgres:14
     env_file:
-      - postgres_oil.env
+      - "./envs/postgres_oil.env"
     volumes:
-      - "~/container_volumes/postgres_oil/data:/var/lib/postgresql/data"
+      - "./init_oil:/docker-entrypoint-initdb.d"
 
-  postgres_gas:
+  postgres_liq:
     image: postgres:14
     env_file:
-      - postgres_gas.env
+      - "./envs/postgres_liq.env"
     volumes:
-      - "~/container_volumes/postgres_gas/data:/var/lib/postgresql/data"
+      - "./init_liq:/docker-entrypoint-initdb.d"
+
+  postgres_zak:
+    image: postgres:14
+    env_file:
+      - "./envs/postgres_zak.env"
+    volumes:
+      - "./init_zak:/docker-entrypoint-initdb.d"
+
+  plot:
+    build: ./geoprod_adapters
 
   oil:
     build: ./geoprod_oil/
     env_file:
-      - postgres_oil.env
+      - "./envs/oil.env"
     depends_on:
       - postgres_oil
 
-  gas:
-    build: ./geoprod_gas/
+  liq:
+    build: ./geoprod_liq/
     env_file:
-      - postgres_gas.env
+      - "./envs/liq.env"
     depends_on:
-      - postgres_gas
+      - postgres_liq
 
-  fastapi_inpoint:
+  zak:
+    build: ./geoprod_zak/
+    env_file:
+      - "./envs/zak.env"
+    depends_on:
+      - postgres_zak
+
+  com:
+    build: ./geoprod_com/
+    depends_on:
+      - zak
+      - liq
+
+  inpoint:
     build: ./geoprod_inpoint/
     ports:
       - "80:8000"
     depends_on:
+      - com
       - oil
-      - gas
+      - plot
