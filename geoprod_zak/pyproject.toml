@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "geoprod_zak"
+version = "0.1.0"
+description = ""
+authors = ["Fedor Kuznetsov <dmesser@yandex.ru>"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+fastapi = "^0.78.0"
+sqlmodel = {extras = ["postgres"], version = "^0.0.6"}
+uvicorn = "^0.17.6"
+SQLAlchemy = {extras = ["postgres"], version = "^1.4.36"}
+psycopg2-binary = "^2.9.3"
+
+[tool.poetry.dev-dependencies]
+pytest = "^5.2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
