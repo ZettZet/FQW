@@ -1,6 +1,13 @@
+from datetime import datetime
+from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel
+
+
+class Mode(Enum):
+    CubeMeter = '0'
+    Tonne = '1'
 
 
 class Well(BaseModel):
@@ -11,7 +18,8 @@ class Well(BaseModel):
     def __init__(self, **kwargs):
         kwargs['id'] = kwargs['properties']['id']
         kwargs['name'] = kwargs['properties']['name']
-        kwargs['weights'] = kwargs['properties']['weights']
+        weight = {str(datetime.strptime(key, '%d.%m.%Y').date()):value for key, value in kwargs['properties']['weights'].items()}
+        kwargs['weights'] = weight
         super().__init__(**kwargs)
 
 
@@ -24,7 +32,6 @@ class Region(BaseModel):
         kwargs['wells'] = kwargs['properties']['wells']['features']
         super().__init__(**kwargs)
 
-
 class GeoInput(BaseModel):
     regions: list[Region]
 
@@ -32,6 +39,3 @@ class GeoInput(BaseModel):
         kwargs['regions'] = kwargs['features']
         super().__init__(**kwargs)
 
-
-class GeoOutput(BaseModel):
-    ...

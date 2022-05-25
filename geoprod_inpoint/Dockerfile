@@ -30,8 +30,8 @@ RUN poetry config virtualenvs.create false
 RUN poetry install --no-dev
 
 # `production` image used for runtime
-COPY geoprod/ /app/geoprod
+COPY src/ /app/src
 USER root
 RUN chown -R backend:backend /app
 USER backend
-CMD ["uvicorn", "geoprod.main:api", "--host", "0.0.0.0"]
+CMD ["uvicorn", "src.main:api", "--host", "0.0.0.0"]
