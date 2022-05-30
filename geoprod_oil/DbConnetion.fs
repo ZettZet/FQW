@@ -12,4 +12,3 @@ let private dbName = Environment.GetEnvironmentVariable "POSTGRES_DB"
 
 let connectionString =
     $"User ID={userName};Password={userPassword};Host={host};Port={port};Database={dbName};"
-// $"postgresql://{userName}:{userPassword}@{host}:{port}/{dbName}"

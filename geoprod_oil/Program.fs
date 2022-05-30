@@ -13,24 +13,18 @@ open Npgsql
 open Models
 open DbConnection
 
-let wellsSatisfy (from_: DateTime) (to_: DateTime) (id: string) (name: string) mode =
+let wellsSatisfy from_ to_ mode id name =
     task {
-        let name = name.Trim('"')
-        let id = id.Trim('"')
-
-        let qs =
-            """select * from "OilWell" where well=@well and well_num=@well_num and dt between @from_ and @to_"""
-
         use conn = new NpgsqlConnection(connectionString)
 
         let result =
-            (Sql.existingConnection conn
-             |> Sql.query qs
-             |> Sql.parameters [ "well", Sql.string id
-                                 "well_num", Sql.string name
-                                 "from_", Sql.timestamp from_
-                                 "to_", Sql.timestamp to_ ]
-             |> Sql.executeAsync (OilWellValue.read mode))
+            Sql.existingConnection conn
+            |> Sql.query """select * from "OilWell" where well=@well and well_num=@well_num and dt between @from_ and @to_"""
+            |> Sql.parameters [ "well", Sql.string id
+                                "well_num", Sql.string name
+                                "from_", Sql.timestamp from_
+                                "to_", Sql.timestamp to_ ]
+            |> Sql.executeAsync (OilWellValue.read mode)
 
         return! result
     }
@@ -38,26 +32,27 @@ let wellsSatisfy (from_: DateTime) (to_: DateTime) (id: string) (name: string) m
 let logic (query: GeoQueryString) (regions: GeoInput) =
     task {
         let mutable wellsWithResult = []
+        let wellsSatisfy = wellsSatisfy query.from_ query.to_ query.mode
 
         for region in regions.regions do
             for well in region.wells do
                 if well.id.IsSome && well.name.IsSome then
-                    let well_id = well.id.Value
-                    let well_name = well.name.Value
+                    let well_id = well.id.Value.Trim('"')
+                    let well_name = well.name.Value.Trim('"')
 
-                    let! satisfied = wellsSatisfy query.from_ query.to_ well_id well_name query.mode
+                    let! satisfied = wellsSatisfy well_id well_name
 
                     let mutable result = 0.0
                     let mutable result_unweighted = 0.0
 
                     for ws in satisfied do
                         let weight =
-                            match well.weights.Count with
-                            | n when n > 0 ->
+                            if well.weights.Count > 0 then
                                 well.weights
                                 |> Seq.minBy (fun t -> DateTime.Parse t.Key - DateTime.Today)
                                 |> (fun t -> t.Value)
-                            | _ -> 1.0
+                            else
+                                1.0
 
                         result <- result + weight * ws.oil
                         result_unweighted <- result_unweighted + ws.oil
@@ -79,11 +74,8 @@ let calculateProduction =
         task {
             let geoParams = ctx.BindQueryString<GeoQueryString>()
             let! jsonInput = ctx.BindJsonAsync<GeoInput>()
-            // let logger = ctx.GetLogger()
-            // logger.LogCritical(geoParams.ToString())
-            // logger.LogCritical(jsonInput.ToString())
             let! result = logic geoParams jsonInput
-            return! ctx.WriteJsonAsync(result |> Seq.toArray)
+            return! ctx.WriteJsonAsync(result)
         })
 
 let webApp = choose [ route "/" >=> calculateProduction ]
@@ -94,7 +86,7 @@ let configureApp (app: IApplicationBuilder) =
     app.UseGiraffe webApp
 
 let configureServices (services: IServiceCollection) =
-    // Add Giraffe dependencies
+    // Add System.Text.Json and JsonFSharpConverter as JSON (de)serializer
     let jsonOptions = JsonSerializerOptions()
     jsonOptions.Converters.Add(JsonFSharpConverter())
     services.AddSingleton(jsonOptions) |> ignore
@@ -102,13 +94,14 @@ let configureServices (services: IServiceCollection) =
     services.AddSingleton<Json.ISerializer, SystemTextJson.Serializer>()
     |> ignore
 
+    // Add Giraffe dependencies
     services.AddGiraffe() |> ignore
 
-// let errorHandler (ex: Exception) (logger: ILogger) =
-//     logger.LogError(EventId(), ex, "An unhandled exception has occurred while executing the request.")
+let errorHandler (ex: Exception) (logger: ILogger) =
+    logger.LogError(EventId(), ex, "An unhandled exception has occurred while executing the request.")
 
-//     clearResponse
-//     >=> ServerErrors.INTERNAL_ERROR ex.Message
+    clearResponse
+    >=> ServerErrors.INTERNAL_ERROR ex.Message
 
 [<EntryPoint>]
 let main _ =
