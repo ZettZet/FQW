@@ -12,9 +12,6 @@ api = FastAPI()
 def get_mode_units(mode: Mode):
     return "m^3" if mode == Mode.CubeMeter else "l"
 
-    # post("http://oil:80", data=request_.json(),
-    #      params={"from_": from_, "to_": to_, "mode": mode.value})
-
 
 # type: ignore
 def make_request(url: str, port: int, data: str, params: dict[str, str]):
@@ -42,30 +39,16 @@ async def oil(request_: GeoInput, mode: Mode = Query(...), from_: date = Query(.
 @api.post('/liq')
 async def liq(request_: GeoInput, mode: Mode = Query(...), from_: date = Query(...), to_: date = Query(...), plot: bool = False):
     return handle_request('liq', 8000, request_.json(), from_, to_, plot, mode)
-    # req = post("http://liq:8000", data=request_.json(),
-    #            params={"from_": from_, "to_": to_, "mode": mode.value})
-    # if plot:
-    #     return post("http://plot:80", data=req.json()).text
-    # return req.json()
 
 
 @api.post('/zak')
 async def zak(request_: GeoInput, from_: date = Query(...), to_: date = Query(...), plot: bool = False):
     return handle_request('zak', 8000, request_.json(), from_, to_, plot)
-    req = post("http://zak:8000", data=request_.json(),
-               params={"from_": from_, "to_": to_})
-    if plot:
-        return post("http://plot:80", data=req.json()).text
-    return req.json()
 
 
 @api.post('/com')
 async def com(request_: GeoInput, from_: date = Query(...), to_: date = Query(...), plot: bool = False):
-    req = post("http://com:8000", data=request_.json(),
-               params={"from_": from_, "to_": to_})
-    if plot:
-        return PlainTextResponse(post(f"http://plot:80/com", data=req.text.encode('utf8'), headers={'content-type': 'application/json'}).text.encode('utf8'))
-    return req.json()
+    return handle_request('com', 8000, request_.json(), from_, to_, plot)
 
 
 if __name__ == '__main__':
